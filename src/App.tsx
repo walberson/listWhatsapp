@@ -1,46 +1,140 @@
-import { useState } from "react";
-import "./App.css";
-import { EmptyCart } from "./components/EmptyCart";
-import { Header } from "./components/Header";
-import { ItemsCounter } from "./components/ItemsCounter";
+import {
+  Button,
+  Flex,
+  Heading,
+  List,
+  ListIcon,
+  ListItem,
+  Stack,
+  useDisclosure,
+  Box,
+} from "@chakra-ui/react";
+import { useEffect, useState } from "react";
+import { FaCircleCheck, FaCircleExclamation } from "react-icons/fa6";
+import { CreateTaksModal } from "./components/CreateTaskModal";
+import { EditTaskModal } from "./components/EditTaskModal";
+
+export interface Task {
+  id: string;
+  text: string;
+  done: boolean;
+}
 
 function App() {
-  const [cart, setCart] = useState<string[]>([]);
-  const [inputValue, setInputValue] = useState("");
+  const {
+    isOpen: isOpenCreateModal,
+    onOpen: onOpenCreateModal,
+    onClose: onCloseCreateModal,
+  } = useDisclosure();
+  const {
+    isOpen: isOpenEditModal,
+    onOpen: onOpenEditModal,
+    onClose: onCloseEditModal,
+  } = useDisclosure();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [selectedTask, setSelectedTask] = useState<Task>();
+  useEffect(() => {
+    const storedTasks = JSON.parse(localStorage.getItem("tasks") || "[]");
+    if (storedTasks.length > 0) {
+      setTasks(storedTasks);
+    }
+  }, []);
 
   return (
-    <div>
-      <Header title="🔥Lista de compras🔥" subtitle="Seja bem vindo" />
-      <ul>
-        {cart.map((item) => (
-          <li style={{ fontSize: 30 }}>{item}</li>
-        ))}
-      </ul>
-      {cart.length > 0 ? <ItemsCounter total={cart.length} /> : <EmptyCart />}
-      <div style={{ display: "flex", flexDirection: "column" }}>
-        <span>item a ser adicionado: {inputValue}</span>
-        <input
-          type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-        />
-        <button
-          onClick={() => {
-            setCart([...cart,inputValue]);
-            setInputValue("");
-          }}
-        >
-          Adicionar ao carrinho
-        </button>
-        <a
-          href={`https://api.whatsapp.com/send/?phone=15551234567&text=ola+a+sua+compra+e+${cart.join(
-            "+"
-          )}`}
-        >
-          <button>🦤Enviar por whatsapp</button>
-        </a>
-      </div>
-    </div>
+    <>
+      <Flex flex="1" px="30" direction="column">
+        <Stack spacing="10">
+          <Heading>Todo-list online</Heading>
+          <Stack>
+            <Button onClick={
+              () => {
+                const storedTasks = JSON.parse(localStorage.getItem("tasks") || "[]");
+                setTasks(storedTasks);
+              }
+            } >Todas</Button>
+            <Button
+            onClick={
+              () => {
+                const storedTasks = JSON.parse(localStorage.getItem("tasks") || "[]");
+                const newTasks = storedTasks.filter((task: Task) => task.done);
+                setTasks(newTasks);
+            }}
+            >Concluída</Button>
+            <Button
+            onClick={
+              () => {
+                const storedTasks = JSON.parse(localStorage.getItem("tasks") || "[]");
+                const newTasks = storedTasks.filter((task: Task) => !task.done);
+                setTasks(newTasks);}
+            }
+            >Em andamento</Button>
+          </Stack>
+          <List spacing={3}>
+            {tasks.map((todo) => (
+              <ListItem key={todo.id}>
+                <ListIcon
+                  as={todo.done ? FaCircleCheck : FaCircleExclamation}
+                  color={todo.done ? "green.500" : "yellow.500"}
+                />
+                {todo.text}
+                <Button
+                  onClick={() => {
+                    const newTasks = tasks.map((task) => {
+                      if (task.id === todo.id) {
+                        task.done = !task.done;
+                      }
+                      return task;
+                    });
+                    setTasks(newTasks);
+                    localStorage.setItem("tasks", JSON.stringify(newTasks));
+                  }}
+                >
+                  {todo.done ? "Desfazer" : "Fazer"}
+                </Button>
+                <Button
+                  onClick={() => {
+                    const newTasks = tasks.filter(
+                      (task) => task.id !== todo.id
+                    );
+                    setTasks(newTasks);
+                    localStorage.setItem("tasks", JSON.stringify(newTasks));
+                  }}
+                >
+                  Excluir
+                </Button>
+                <Button
+                  onClick={() => {
+                    setSelectedTask(todo);
+                    onOpenEditModal();
+                  }}
+                >
+                  Editar
+                </Button>
+                {isOpenEditModal && (
+                  <EditTaskModal
+                    key={todo.id}
+                    isOpen={isOpenEditModal}
+                    onClose={onCloseEditModal}
+                    onOpen={onOpenEditModal}
+                    setTasks={setTasks}
+                    selectedTask={selectedTask as Task}
+                  />
+                )}
+              </ListItem>
+            ))}
+          </List>
+          <Box>
+            <Button onClick={onOpenCreateModal}>Adicionar tarefa</Button>
+          </Box>
+        </Stack>
+      </Flex>
+      <CreateTaksModal
+        setTasks={setTasks}
+        isOpen={isOpenCreateModal}
+        onOpen={onOpenCreateModal}
+        onClose={onCloseCreateModal}
+      />
+    </>
   );
 }
 
